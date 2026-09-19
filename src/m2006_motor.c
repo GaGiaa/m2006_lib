@@ -22,7 +22,7 @@
 #define M2006_MOTOR_RX_TIMEOUT_MS (20U)
 
 /* 安全保护默认值 */
-#define M2006_MOTOR_CURRENT_LIMIT_DEFAULT (10000)  /* 默认电流钳位 10A（电调满量程；调试放开，带负载/上线前应收回到 3A 额定） */
+#define M2006_MOTOR_CURRENT_LIMIT_DEFAULT (8000)   /* 默认电流钳位 8A（低于电调满量程 10A；调试放开，带负载/上线前应收回到 3A 额定） */
 #define M2006_MOTOR_SPEED_LIMIT_DEFAULT_RPM (0)    /* 默认超速保护阈值：0 = 关闭保护（调试期默认），>0 时生效 */
 
 /* 输出轴力矩换算：torque_out_nm = torque_raw × 0.18 / 1000

@@ -74,7 +74,7 @@ static void test_init_default_state(void)
   m2006_motor_init(&motor, 2U);
   M2006_MOTOR_TEST_ASSERT(motor.esc_id == 2U, "esc_id stored");
   M2006_MOTOR_TEST_ASSERT(motor.is_enabled == 0U, "disabled by default");
-  M2006_MOTOR_TEST_ASSERT(motor.current_limit_lsb == 10000, "current limit default");
+  M2006_MOTOR_TEST_ASSERT(motor.current_limit_lsb == 8000, "current limit default");
   M2006_MOTOR_TEST_ASSERT(motor.speed_limit_rpm == 0, "speed limit off by default");
   M2006_MOTOR_TEST_ASSERT(motor.mode == M2006_MOTOR_MODE_OPEN_LOOP,
                           "open loop by default");
@@ -98,7 +98,7 @@ static void test_open_loop_clamped(void)
   motor_init_ready(2U);
   g_motor.current_setpoint_lsb = 12000;
   feed_measure(0U, 0, 0U);
-  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == 10000,
+  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == 8000,
                           "open loop clamped to current limit");
 }
 
@@ -107,7 +107,7 @@ static void test_open_loop_negative_clamped(void)
   motor_init_ready(2U);
   g_motor.current_setpoint_lsb = -12000;
   feed_measure(0U, 0, 0U);
-  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == -10000,
+  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == -8000,
                           "open loop negative clamped");
 }
 
