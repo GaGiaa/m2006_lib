@@ -185,8 +185,9 @@ static void test_speed_loop_direction_and_magnitude(void)
   g_motor.mode = M2006_MOTOR_MODE_SPEED;
   g_motor.speed_setpoint_rpm = 100.0f;
   feed_measure(0U, 0, 0U);
-  /* 增量式 PI 首拍：kp*e = 30*100 = 3000，ki*e*dt = 0.5，累加器从 0 起步 */
-  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == 3000,
+  /* 增量式 PI 首拍：kp*e = 200*100 = 20000，ki*e*dt = 18000*100*0.001 = 1800，
+     累加器从 0 起步，合计 21800 → 钳位 8000 */
+  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == 8000,
                           "speed loop first sample output");
   M2006_MOTOR_TEST_ASSERT(g_motor.speed_cmd_rpm == 100.0f,
                           "speed command passes through");
@@ -209,7 +210,7 @@ static void test_position_loop_deadband(void)
 {
   motor_init_ready(2U);
   g_motor.mode = M2006_MOTOR_MODE_POSITION;
-  g_motor.pos_setpoint_deg = 0.2f;   /* |误差| < 死区 0.5 */
+  g_motor.pos_setpoint_deg = 0.05f;  /* |误差| < 死区 0.1 */
   feed_measure(0U, 0, 0U);
   (void)m2006_motor_update(&g_motor, 5U);
   M2006_MOTOR_TEST_ASSERT(g_motor.pos_in_deadband == 1U, "inside deadband");
@@ -224,11 +225,12 @@ static void test_position_loop_cascade(void)
   g_motor.pos_setpoint_deg = 10.0f;
   feed_measure(0U, 0, 0U);
   (void)m2006_motor_update(&g_motor, 5U);
-  /* 位置环 kp=1 → speed_cmd = 10 rpm；速度环 kp=30 → 电流 ≈ 300 */
-  M2006_MOTOR_TEST_ASSERT(g_motor.speed_cmd_rpm == 10.0f,
+  /* 位置环 kp=3 → speed_cmd = 30 rpm（< 限幅 300）；
+     速度环首拍（梯形积分，prev_e=0）kp*30 + ki*30*0.5*dt = 6000 + 270 = 6270 < 钳位 8000 */
+  M2006_MOTOR_TEST_ASSERT(g_motor.speed_cmd_rpm == 30.0f,
                           "position loop output is speed command");
-  M2006_MOTOR_TEST_ASSERT(g_motor.output_current_lsb == 300,
-                          "cascade current = 30 * speed command");
+  M2006_MOTOR_TEST_ASSERT(g_motor.output_current_lsb == 6270,
+                          "cascade current = kp*30 + ki*30*0.5*dt");
 }
 
 /* ---- 模式切换累加器预置 ---- */
@@ -242,8 +244,8 @@ static void test_mode_switch_presets_accumulator(void)
                           "open loop at 3000");
   g_motor.mode = M2006_MOTOR_MODE_SPEED;
   g_motor.speed_setpoint_rpm = 100.0f;
-  /* 累加器预置为 3000，再加首拍增量 3000.5 → 6000 */
-  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 10U) == 6000,
+  /* 累加器预置为 3000，再加首拍增量 21800 → 24800，钳位到 8000 */
+  M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 10U) == 8000,
                           "switch presets accumulator to avoid jump");
 }
 
