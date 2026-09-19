@@ -52,7 +52,7 @@ static void motor_init_ready(uint8_t esc_id)
 {
   m2006_motor_init(&g_motor, esc_id);
   g_motor.is_enabled = 1U;
-  g_motor.current_setpoint = 500;
+  g_motor.current_setpoint_lsb = 500;
 }
 
 static void feed_measure(uint16_t angle_raw, int16_t speed_rpm, uint32_t tick_ms)
@@ -74,11 +74,11 @@ static void test_init_default_state(void)
   m2006_motor_init(&motor, 2U);
   M2006_MOTOR_TEST_ASSERT(motor.esc_id == 2U, "esc_id stored");
   M2006_MOTOR_TEST_ASSERT(motor.is_enabled == 0U, "disabled by default");
-  M2006_MOTOR_TEST_ASSERT(motor.current_limit == 10000, "current limit default");
+  M2006_MOTOR_TEST_ASSERT(motor.current_limit_lsb == 10000, "current limit default");
   M2006_MOTOR_TEST_ASSERT(motor.speed_limit_rpm == 0, "speed limit off by default");
   M2006_MOTOR_TEST_ASSERT(motor.mode == M2006_MOTOR_MODE_OPEN_LOOP,
                           "open loop by default");
-  M2006_MOTOR_TEST_ASSERT(motor.output_current == 0, "output zero after init");
+  M2006_MOTOR_TEST_ASSERT(motor.output_current_lsb == 0, "output zero after init");
   M2006_MOTOR_TEST_ASSERT(motor.rx_msg_count == 0U, "no feedback yet");
   M2006_MOTOR_TEST_ASSERT(motor.is_rx_timeout == 1U, "timeout before first rx");
 }
@@ -96,7 +96,7 @@ static void test_open_loop_direct(void)
 static void test_open_loop_clamped(void)
 {
   motor_init_ready(2U);
-  g_motor.current_setpoint = 12000;
+  g_motor.current_setpoint_lsb = 12000;
   feed_measure(0U, 0, 0U);
   M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == 10000,
                           "open loop clamped to current limit");
@@ -105,7 +105,7 @@ static void test_open_loop_clamped(void)
 static void test_open_loop_negative_clamped(void)
 {
   motor_init_ready(2U);
-  g_motor.current_setpoint = -12000;
+  g_motor.current_setpoint_lsb = -12000;
   feed_measure(0U, 0, 0U);
   M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == -10000,
                           "open loop negative clamped");
@@ -197,7 +197,7 @@ static void test_speed_loop_clamped_by_current_limit(void)
   motor_init_ready(2U);
   g_motor.mode = M2006_MOTOR_MODE_SPEED;
   g_motor.speed_setpoint_rpm = 400.0f;
-  g_motor.current_limit = 3000;
+  g_motor.current_limit_lsb = 3000;
   feed_measure(0U, 0, 0U);
   M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == 3000,
                           "speed loop clamped to current limit");
@@ -214,7 +214,7 @@ static void test_position_loop_deadband(void)
   (void)m2006_motor_update(&g_motor, 5U);
   M2006_MOTOR_TEST_ASSERT(g_motor.pos_in_deadband == 1U, "inside deadband");
   M2006_MOTOR_TEST_ASSERT(g_motor.speed_cmd_rpm == 0.0f, "speed cmd zero in deadband");
-  M2006_MOTOR_TEST_ASSERT(g_motor.output_current == 0, "output zero in deadband");
+  M2006_MOTOR_TEST_ASSERT(g_motor.output_current_lsb == 0, "output zero in deadband");
 }
 
 static void test_position_loop_cascade(void)
@@ -227,7 +227,7 @@ static void test_position_loop_cascade(void)
   /* 位置环 kp=1 → speed_cmd = 10 rpm；速度环 kp=30 → 电流 ≈ 300 */
   M2006_MOTOR_TEST_ASSERT(g_motor.speed_cmd_rpm == 10.0f,
                           "position loop output is speed command");
-  M2006_MOTOR_TEST_ASSERT(g_motor.output_current == 300,
+  M2006_MOTOR_TEST_ASSERT(g_motor.output_current_lsb == 300,
                           "cascade current = 30 * speed command");
 }
 
@@ -236,7 +236,7 @@ static void test_position_loop_cascade(void)
 static void test_mode_switch_presets_accumulator(void)
 {
   motor_init_ready(2U);
-  g_motor.current_setpoint = 3000;
+  g_motor.current_setpoint_lsb = 3000;
   feed_measure(0U, 0, 0U);
   M2006_MOTOR_TEST_ASSERT(m2006_motor_update(&g_motor, 5U) == 3000,
                           "open loop at 3000");

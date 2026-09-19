@@ -28,6 +28,8 @@
 #define M2006_PROTOCOL_GEAR_RATIO (36U)          /* M2006 减速比 36:1 */
 #define M2006_PROTOCOL_ANGLE_MAX (8191U)         /* 转子机械角度满量程 */
 #define M2006_PROTOCOL_CURRENT_FULL_SCALE (10000) /* 电流满量程，对应 10A */
+/* 电流指令分辨率：1000 LSB = 1A（C610 协议电流环指令与反馈电流同量纲） */
+#define M2006_PROTOCOL_CURRENT_LSB_PER_AMP (1000)
 
 /* 输出轴角度换算系数：转子一圈 360° 经 36:1 减速 = 输出轴 10°/圈，再按 8191 归一 */
 #define M2006_PROTOCOL_ANGLE_SCALE_DEG \
@@ -45,7 +47,7 @@ typedef struct m2006_measure
 {
   uint16_t angle_raw;   /* 转子机械角度，范围 [0, 8191] */
   int16_t speed_rpm;    /* 转子转速，单位 rpm（高速侧，除以减速比得输出轴转速） */
-  int16_t torque_raw;   /* 实际输出转矩原始值（实为电流环反馈电流，1000 LSB = 1A） */
+  int16_t torque_raw;   /* 实际输出转矩原始值（实为电流环反馈电流，单位 LSB，1000 LSB = 1A） */
 } m2006_measure_t;
 
 /**

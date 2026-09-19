@@ -113,7 +113,7 @@ static void test_pack_low_group_only(void)
   m2006_motor_init(&motor, 2U);
   M2006_BUS_TEST_ASSERT(m2006_bus_attach_motor(&bus, &motor, 2U) == 1U,
                         "attach low motor");
-  motor.output_current = 1000;
+  motor.output_current_lsb = 1000;
 
   frame_count = m2006_bus_pack_tx_frames(&bus, frame_id, frame_data);
   M2006_BUS_TEST_ASSERT(frame_count == 1U, "one frame when only low group");
@@ -138,7 +138,7 @@ static void test_pack_high_group_only(void)
   m2006_motor_init(&motor, 7U);
   M2006_BUS_TEST_ASSERT(m2006_bus_attach_motor(&bus, &motor, 7U) == 1U,
                         "attach high motor");
-  motor.output_current = -500;
+  motor.output_current_lsb = -500;
 
   frame_count = m2006_bus_pack_tx_frames(&bus, frame_id, frame_data);
   M2006_BUS_TEST_ASSERT(frame_count == 1U, "one frame when only high group");
@@ -158,8 +158,8 @@ static void test_pack_both_groups(void)
   uint32_t frame_count;
 
   bus_with_two_motors();
-  g_motor_low.output_current = 1000;   /* esc_id=2 → 低段偏移 2..3 */
-  g_motor_high.output_current = -500;  /* esc_id=7 → 高段偏移 4..5 */
+  g_motor_low.output_current_lsb = 1000;   /* esc_id=2 → 低段偏移 2..3 */
+  g_motor_high.output_current_lsb = -500;  /* esc_id=7 → 高段偏移 4..5 */
 
   frame_count = m2006_bus_pack_tx_frames(&g_bus, frame_id, frame_data);
   M2006_BUS_TEST_ASSERT(frame_count == 2U, "two frames when both groups");

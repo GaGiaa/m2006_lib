@@ -116,7 +116,7 @@ uint32_t m2006_bus_pack_tx_frames(
       {
         (void)m2006_protocol_encode_control(
             esc_id,
-            bus->motor_slots[slot_index]->output_current,
+            bus->motor_slots[slot_index]->output_current_lsb,
             frame_data[frame_count]);
       }
     }
@@ -135,7 +135,7 @@ uint32_t m2006_bus_pack_tx_frames(
       {
         (void)m2006_protocol_encode_control(
             esc_id,
-            bus->motor_slots[slot_index]->output_current,
+            bus->motor_slots[slot_index]->output_current_lsb,
             frame_data[frame_count]);
       }
     }

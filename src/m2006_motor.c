@@ -49,7 +49,7 @@ void m2006_motor_init(m2006_motor_t *motor, uint8_t esc_id)
   /* ---- 配置区默认值 ---- */
   motor->esc_id = esc_id;
   motor->is_enabled = 0U;
-  motor->current_limit = M2006_MOTOR_CURRENT_LIMIT_DEFAULT;
+  motor->current_limit_lsb = M2006_MOTOR_CURRENT_LIMIT_DEFAULT;
   motor->speed_limit_rpm = M2006_MOTOR_SPEED_LIMIT_DEFAULT_RPM;
   motor->mode = M2006_MOTOR_MODE_OPEN_LOOP;
   motor->pos_setpoint_deg = 0.0f;
@@ -60,7 +60,7 @@ void m2006_motor_init(m2006_motor_t *motor, uint8_t esc_id)
   motor->spd_pid_kp = M2006_MOTOR_SPD_PID_KP_DEFAULT;
   motor->spd_pid_ki = M2006_MOTOR_SPD_PID_KI_DEFAULT;
   motor->spd_setpoint_rate = M2006_MOTOR_SPD_SETPOINT_RATE_DEFAULT;
-  motor->current_setpoint = 0;
+  motor->current_setpoint_lsb = 0;
 
   /* ---- 观测区清零 ---- */
   motor->angle_raw_deg = 0.0f;
@@ -70,8 +70,8 @@ void m2006_motor_init(m2006_motor_t *motor, uint8_t esc_id)
   motor->pos_feedback_deg = 0.0f;
   motor->speed_feedback_rpm = 0.0f;
   motor->speed_cmd_rpm = 0.0f;
-  motor->current_cmd_raw = 0;
-  motor->output_current = 0;
+  motor->current_cmd_raw_lsb = 0;
+  motor->output_current_lsb = 0;
   motor->rx_msg_count = 0U;
   motor->is_rx_timeout = 1U;
   motor->pos_in_deadband = 0U;
@@ -104,13 +104,13 @@ void m2006_motor_init(m2006_motor_t *motor, uint8_t esc_id)
   motor->pos_pid.integral_hold_error = 0.0f;
   (void)pid_init(&motor->pos_pid);
 
-  /* 速度环：增量式，PI，输出限幅 = 电流钳位（单一来源 current_limit） */
+  /* 速度环：增量式，PI，输出限幅 = 电流钳位（单一来源 current_limit_lsb） */
   motor->spd_pid.kp = motor->spd_pid_kp;
   motor->spd_pid.ki = motor->spd_pid_ki;
   motor->spd_pid.kd = 0.0f;
   motor->spd_pid.dt = M2006_MOTOR_DT_SEC;
-  motor->spd_pid.out_min = -(float)motor->current_limit;
-  motor->spd_pid.out_max = (float)motor->current_limit;
+  motor->spd_pid.out_min = -(float)motor->current_limit_lsb;
+  motor->spd_pid.out_max = (float)motor->current_limit_lsb;
   motor->spd_pid.setpoint_rate = motor->spd_setpoint_rate;
   motor->spd_pid.deadband = 0.0f;
   motor->spd_pid.hysteresis = 0.0f;
@@ -139,7 +139,7 @@ int16_t m2006_motor_update(m2006_motor_t *motor, uint32_t tick_ms)
   float current_cmd;
   float current_limit_f;
   int16_t speed_limit_rpm;
-  int16_t output_current;
+  int16_t output_current_lsb;
 
   if (motor == 0)
   {
@@ -190,7 +190,7 @@ int16_t m2006_motor_update(m2006_motor_t *motor, uint32_t tick_ms)
   motor->pos_pid.out_min = -motor->pos_max_speed_rpm;
   motor->pos_pid.out_max = motor->pos_max_speed_rpm;
 
-  current_limit_f = (float)motor->current_limit;
+  current_limit_f = (float)motor->current_limit_lsb;
   motor->spd_pid.kp = motor->spd_pid_kp;
   motor->spd_pid.ki = motor->spd_pid_ki;
   motor->spd_pid.setpoint_rate = motor->spd_setpoint_rate;
@@ -203,7 +203,7 @@ int16_t m2006_motor_update(m2006_motor_t *motor, uint32_t tick_ms)
   {
     pid_reset(&motor->pos_pid);
     pid_inc_reset(&motor->spd_pid);
-    motor->spd_pid.output = (float)motor->output_current;
+    motor->spd_pid.output = (float)motor->output_current_lsb;
     motor->prev_mode = motor->mode;
   }
 
@@ -211,10 +211,10 @@ int16_t m2006_motor_update(m2006_motor_t *motor, uint32_t tick_ms)
   switch (motor->mode)
   {
     case M2006_MOTOR_MODE_OPEN_LOOP:
-      /* 电流开环：目标电流直通（current_setpoint），钳位仍生效 */
+      /* 电流开环：目标电流直通（current_setpoint_lsb），钳位仍生效 */
       motor->speed_cmd_rpm = 0.0f;
       motor->pos_in_deadband = 0U;
-      current_cmd = (float)motor->current_setpoint;
+      current_cmd = (float)motor->current_setpoint_lsb;
       break;
 
     case M2006_MOTOR_MODE_SPEED:
@@ -253,13 +253,13 @@ int16_t m2006_motor_update(m2006_motor_t *motor, uint32_t tick_ms)
   {
     current_cmd = -current_limit_f;
   }
-  motor->current_cmd_raw = (int16_t)current_cmd;
+  motor->current_cmd_raw_lsb = (int16_t)current_cmd;
 
   /* 8. 安全门：断使能 / 反馈超时 / 超速任一成立则输出 0 */
-  output_current = (int16_t)current_cmd;
+  output_current_lsb = (int16_t)current_cmd;
   if ((!motor->is_enabled) || (motor->is_rx_timeout != 0U))
   {
-    output_current = 0;
+    output_current_lsb = 0;
   }
   else
   {
@@ -268,10 +268,10 @@ int16_t m2006_motor_update(m2006_motor_t *motor, uint32_t tick_ms)
         && ((motor->speed_out_rpm > (float)speed_limit_rpm)
             || (motor->speed_out_rpm < -(float)speed_limit_rpm)))
     {
-      output_current = 0;
+      output_current_lsb = 0;
     }
   }
 
-  motor->output_current = output_current;
-  return output_current;
+  motor->output_current_lsb = output_current_lsb;
+  return output_current_lsb;
 }

@@ -28,7 +28,7 @@
 /* 控制模式 */
 typedef enum m2006_motor_mode
 {
-  M2006_MOTOR_MODE_OPEN_LOOP = 0,  /* 电流开环：目标电流取 current_setpoint */
+  M2006_MOTOR_MODE_OPEN_LOOP = 0,  /* 电流开环：目标电流取 current_setpoint_lsb */
   M2006_MOTOR_MODE_SPEED,          /* 速度闭环：速度设定 → 速度环（增量式 PI）→ 电流 */
   M2006_MOTOR_MODE_POSITION,       /* 位置闭环：位置环（位置式 P）→ 速度环 → 电流 */
 } m2006_motor_mode_t;
@@ -49,9 +49,9 @@ typedef struct m2006_motor
   /* 输出使能：0 断输出（电流恒为 0），1 使能控制 */
   uint8_t is_enabled;
 
-  /* 电流钳位限幅，输出电流绝对值不超过该值（默认 10000 = 10A 调试放开；
-     带负载/上线前应收回 3A 额定，即 3000） */
-  int16_t current_limit;
+  /* 电流钳位限幅（LSB，1000 LSB = 1A；输出电流绝对值不超过该值；
+     默认 10000 = 10A 调试放开，带负载/上线前应收回 3A 额定 = 3000） */
+  int16_t current_limit_lsb;
 
   /* 输出轴转速限幅 rpm，超速时输出置 0（默认 0 = 关闭超速保护） */
   int16_t speed_limit_rpm;
@@ -83,8 +83,9 @@ typedef struct m2006_motor
   /* 速度设定最大变化率（rpm/s，默认 0 = 禁用斜坡） */
   float spd_setpoint_rate;
 
-  /* 目标电流（驱动输入，OPEN_LOOP 模式直通值），范围 -10000~+10000 */
-  int16_t current_setpoint;
+  /* 目标电流指令（LSB，1000 LSB = 1A；OPEN_LOOP 模式直通值；
+     范围 -10000~+10000 即 -10A~+10A；M2006 额定 3A = 3000） */
+  int16_t current_setpoint_lsb;
 
   /* ==== 观测区（只读） ==== */
 
@@ -109,11 +110,11 @@ typedef struct m2006_motor
   /* 位置环输出（速度环设定值），POSITION 模式有效 */
   float speed_cmd_rpm;
 
-  /* 速度环输出（电流指令 raw，钳位后），镜像到 output_current 前值 */
-  int16_t current_cmd_raw;
+  /* 速度环输出（电流指令 raw，LSB，钳位后），镜像到 output_current_lsb 前值 */
+  int16_t current_cmd_raw_lsb;
 
-  /* 驱动实际下发的电流值（钳位/安全门后的结果） */
-  int16_t output_current;
+  /* 驱动实际下发的电流值（LSB，钳位/安全门后的结果；1000 LSB = 1A） */
+  int16_t output_current_lsb;
 
   /* 反馈超时标志：1 表示最近 M2006_MOTOR_RX_TIMEOUT_MS 内未收到反馈 */
   uint8_t is_rx_timeout;
@@ -173,7 +174,7 @@ void m2006_motor_feed_feedback(m2006_motor_t *motor,
   *         → 钳位 → 安全门，返回最终电流 raw
   * @param  motor   电机实例指针
   * @param  tick_ms 当前时钟（毫秒，单调递增），用于反馈超时判定
-  * @retval 最终输出电流 raw（已钳位 + 安全门，-current_limit ~ +current_limit）
+  * @retval 最终输出电流 raw（已钳位 + 安全门，-current_limit_lsb ~ +current_limit_lsb）
   */
 int16_t m2006_motor_update(m2006_motor_t *motor, uint32_t tick_ms);
 
